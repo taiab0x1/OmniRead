@@ -33,8 +33,9 @@ npm run dev   # http://localhost:5173
 ```bash
 # Android
 # Open android/ in Android Studio.
-# Add OMNIREAD_API_BASE=http://10.0.2.2:8000 to ~/.gradle/gradle.properties
-# Sync Gradle, run the app on an emulator.
+# The default API target is the VPS: http://109.123.244.82:8000
+# For a local emulator backend, run with:
+# ./gradlew :app:installDebug -POMNIREAD_API_BASE=http://10.0.2.2:8000
 ```
 
 ## Scope decisions

@@ -21,8 +21,9 @@ android {
         vectorDrawables { useSupportLibrary = true }
 
         val apiBase = providers
-            .gradleProperty("OMNIREAD_API_BASE")
-            .orElse(System.getenv("OMNIREAD_API_BASE") ?: "http://localhost:8000")
+            .environmentVariable("OMNIREAD_API_BASE")
+            .orElse(providers.gradleProperty("OMNIREAD_API_BASE"))
+            .orElse("http://109.123.244.82:8000")
         buildConfigField("String", "API_BASE_URL", "\"${apiBase.get()}\"")
         buildConfigField("String", "GOOGLE_OAUTH_CLIENT_ID", "\"\"")
     }
