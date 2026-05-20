@@ -91,7 +91,7 @@ OMNIREAD_API_BASE=https://api.rakibul.life ./gradlew :app:bundleRelease
 Release signing must be configured with local/secret Gradle values before upload:
 
 ```text
-OMNIREAD_RELEASE_STORE_FILE=/absolute/path/to/omniread-upload.jks
+OMNIREAD_RELEASE_STORE_FILE=omniread-upload.jks
 OMNIREAD_RELEASE_STORE_PASSWORD=...
 OMNIREAD_RELEASE_KEY_ALIAS=omniread-upload
 OMNIREAD_RELEASE_KEY_PASSWORD=...

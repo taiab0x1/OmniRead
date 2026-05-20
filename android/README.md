@@ -25,10 +25,10 @@ Kotlin + Jetpack Compose Android client for OmniRead.
 
 ## Release Signing
 
-Play uploads require a signed Android App Bundle. Keep the keystore outside git and provide these values through `~/.gradle/gradle.properties`, CI secrets, or environment variables:
+Play uploads require a signed Android App Bundle. Keep the keystore outside git and provide these values through `android/keystore.properties`, `~/.gradle/gradle.properties`, CI secrets, or environment variables:
 
 ```
-OMNIREAD_RELEASE_STORE_FILE=/absolute/path/to/omniread-upload.jks
+OMNIREAD_RELEASE_STORE_FILE=omniread-upload.jks
 OMNIREAD_RELEASE_STORE_PASSWORD=...
 OMNIREAD_RELEASE_KEY_ALIAS=omniread-upload
 OMNIREAD_RELEASE_KEY_PASSWORD=...

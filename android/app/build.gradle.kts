@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -12,9 +14,18 @@ fun gradleOrEnv(name: String, fallback: String) =
         .orElse(providers.gradleProperty(name))
         .orElse(fallback)
 
-fun optionalGradleOrEnv(name: String) =
+val localKeystoreProperties = Properties().apply {
+    val propertiesFile = rootProject.file("keystore.properties")
+    if (propertiesFile.isFile) {
+        propertiesFile.inputStream().use { load(it) }
+    }
+}
+
+fun optionalGradleOrEnv(name: String): String? =
     providers.environmentVariable(name)
         .orElse(providers.gradleProperty(name))
+        .orNull
+        ?: localKeystoreProperties.getProperty(name)
 
 fun buildConfigString(value: String): String =
     "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
@@ -50,12 +61,12 @@ android {
 
     signingConfigs {
         create("release") {
-            val storeFilePath = optionalGradleOrEnv("OMNIREAD_RELEASE_STORE_FILE").orNull
+            val storeFilePath = optionalGradleOrEnv("OMNIREAD_RELEASE_STORE_FILE")
             if (!storeFilePath.isNullOrBlank()) {
-                storeFile = file(storeFilePath)
-                storePassword = optionalGradleOrEnv("OMNIREAD_RELEASE_STORE_PASSWORD").orNull
-                keyAlias = optionalGradleOrEnv("OMNIREAD_RELEASE_KEY_ALIAS").orNull
-                keyPassword = optionalGradleOrEnv("OMNIREAD_RELEASE_KEY_PASSWORD").orNull
+                storeFile = rootProject.file(storeFilePath)
+                storePassword = optionalGradleOrEnv("OMNIREAD_RELEASE_STORE_PASSWORD")
+                keyAlias = optionalGradleOrEnv("OMNIREAD_RELEASE_KEY_ALIAS")
+                keyPassword = optionalGradleOrEnv("OMNIREAD_RELEASE_KEY_PASSWORD")
             }
         }
     }
