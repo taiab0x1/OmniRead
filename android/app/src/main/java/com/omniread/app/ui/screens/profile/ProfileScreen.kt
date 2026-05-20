@@ -2,6 +2,7 @@ package com.omniread.app.ui.screens.profile
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,12 +25,17 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,9 +51,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.omniread.app.data.local.TokenStore
 import com.omniread.app.data.model.UserProfile
+import com.omniread.app.data.repo.AuthRepository
 import com.omniread.app.data.repo.ConfigRepository
 import com.omniread.app.data.repo.UserRepository
 import com.omniread.app.ui.theme.Tokens
+import com.omniread.app.util.AppLinks
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,6 +66,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val userRepo: UserRepository,
+    private val authRepo: AuthRepository,
     private val configRepo: ConfigRepository,
     private val tokenStore: TokenStore,
 ) : ViewModel() {
@@ -66,6 +75,11 @@ class ProfileViewModel @Inject constructor(
     val config = configRepo.config
     private val _isGuest = MutableStateFlow(true)
     val isGuest: StateFlow<Boolean> = _isGuest.asStateFlow()
+    private val _accountActionMessage = MutableStateFlow<String?>(null)
+    val accountActionMessage: StateFlow<String?> = _accountActionMessage.asStateFlow()
+    private val _deletingAccount = MutableStateFlow(false)
+    val deletingAccount: StateFlow<Boolean> = _deletingAccount.asStateFlow()
+
     fun load() {
         viewModelScope.launch {
             val (token, _, _) = tokenStore.read()
@@ -75,6 +89,28 @@ class ProfileViewModel @Inject constructor(
                     _isGuest.value = it.isGuest
                 }
             }
+        }
+    }
+
+    fun clearAccountActionMessage() {
+        _accountActionMessage.value = null
+    }
+
+    fun deleteAccount(onDeleted: () -> Unit) {
+        if (_deletingAccount.value) return
+        viewModelScope.launch {
+            _deletingAccount.value = true
+            runCatching { authRepo.deleteAccount() }
+                .onSuccess {
+                    _profile.value = null
+                    _isGuest.value = true
+                    _accountActionMessage.value = "Account deletion requested."
+                    onDeleted()
+                }
+                .onFailure {
+                    _accountActionMessage.value = it.message ?: "Could not delete account."
+                }
+            _deletingAccount.value = false
         }
     }
 }
@@ -92,11 +128,24 @@ fun ProfileScreen(
     val profile by vm.profile.collectAsState()
     val cfg by vm.config.collectAsState()
     val isGuest by vm.isGuest.collectAsState()
+    val accountActionMessage by vm.accountActionMessage.collectAsState()
+    val deletingAccount by vm.deletingAccount.collectAsState()
     val context = LocalContext.current
     LaunchedEffect(Unit) { vm.load() }
+    LaunchedEffect(accountActionMessage) {
+        accountActionMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            vm.clearAccountActionMessage()
+        }
+    }
     val coins = profile?.coinBalance ?: 0
     val userId = profile?.id ?: "—"
     val vipBenefits = cfg.vipBenefits.ifEmpty { listOf("All Books Unlimited Reading", "New Stories First", "No Ads") }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    fun openUrl(url: String) {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().background(Tokens.Bg0).verticalScroll(rememberScrollState()).padding(16.dp),
@@ -217,18 +266,59 @@ fun ProfileScreen(
             MenuItem("Inbox", Tokens.Accent) { onOpenNotifications() }
             MenuItem("Viewed", Color(0xFFF97316)) {}
             MenuItem("Feedback", Tokens.Danger) {
-                val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:support@omniread.app?subject=Feedback"))
+                val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:${AppLinks.SupportEmail}?subject=Feedback"))
                 context.startActivity(Intent.createChooser(intent, "Send feedback"))
             }
             MenuItem("Rate Us", Tokens.Accent) {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.omniread.app"))
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(AppLinks.PlayStore))
                 context.startActivity(intent)
             }
+        }
+
+        Spacer(Modifier.height(6.dp))
+        MenuItem("Privacy Policy", Color(0xFF38BDF8)) { openUrl(AppLinks.PrivacyPolicy) }
+        MenuItem("Support", Color(0xFF22C55E)) { openUrl(AppLinks.Support) }
+        MenuItem("Account Deletion Info", Color(0xFFF59E0B)) { openUrl(AppLinks.DeleteAccount) }
+        if (profile != null) {
+            MenuItem("Delete Account", Tokens.Danger) { showDeleteConfirm = true }
         }
 
         Spacer(Modifier.height(24.dp))
         Text("UID:${userId.take(8)}", color = Tokens.Ink3, fontSize = 12.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
         Spacer(Modifier.height(40.dp))
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { if (!deletingAccount) showDeleteConfirm = false },
+            title = { Text("Delete account?", color = Tokens.Ink0, fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "This signs you out and sends an account deletion request. Some purchase, security, and compliance records may be retained as described in the deletion policy.",
+                    color = Tokens.Ink2,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !deletingAccount,
+                    onClick = {
+                        vm.deleteAccount {
+                            showDeleteConfirm = false
+                            onSignedOut()
+                        }
+                    },
+                ) {
+                    Text(if (deletingAccount) "Deleting..." else "Delete", color = Tokens.Danger, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(enabled = !deletingAccount, onClick = { showDeleteConfirm = false }) {
+                    Text("Cancel", color = Tokens.Ink2)
+                }
+            },
+            containerColor = Tokens.Bg1,
+            tonalElevation = 0.dp,
+        )
     }
 }
 

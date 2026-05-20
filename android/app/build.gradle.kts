@@ -12,6 +12,10 @@ fun gradleOrEnv(name: String, fallback: String) =
         .orElse(providers.gradleProperty(name))
         .orElse(fallback)
 
+fun optionalGradleOrEnv(name: String) =
+    providers.environmentVariable(name)
+        .orElse(providers.gradleProperty(name))
+
 fun buildConfigString(value: String): String =
     "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
@@ -42,6 +46,18 @@ android {
         vectorDrawables { useSupportLibrary = true }
 
         buildConfigField("String", "GOOGLE_OAUTH_CLIENT_ID", "\"\"")
+    }
+
+    signingConfigs {
+        create("release") {
+            val storeFilePath = optionalGradleOrEnv("OMNIREAD_RELEASE_STORE_FILE").orNull
+            if (!storeFilePath.isNullOrBlank()) {
+                storeFile = file(storeFilePath)
+                storePassword = optionalGradleOrEnv("OMNIREAD_RELEASE_STORE_PASSWORD").orNull
+                keyAlias = optionalGradleOrEnv("OMNIREAD_RELEASE_KEY_ALIAS").orNull
+                keyPassword = optionalGradleOrEnv("OMNIREAD_RELEASE_KEY_PASSWORD").orNull
+            }
+        }
     }
 
     buildTypes {
@@ -77,6 +93,7 @@ android {
 
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release").takeIf { it.storeFile != null }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         debug {
@@ -85,7 +102,7 @@ android {
                 .orElse(providers.gradleProperty("OMNIREAD_DEBUG_API_BASE"))
                 .orElse(providers.environmentVariable("OMNIREAD_API_BASE"))
                 .orElse(providers.gradleProperty("OMNIREAD_API_BASE"))
-                .orElse("http://109.123.244.82:8000")
+                .orElse("https://api.rakibul.life")
                 .get()
             val admobAppId = "ca-app-pub-3940256099942544~3347511713"
             val rewardedAdUnitId = "ca-app-pub-3940256099942544/5224354917"

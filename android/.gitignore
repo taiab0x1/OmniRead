@@ -17,3 +17,6 @@ proguard/
 out/
 release/
 google-services.json
+*.jks
+*.keystore
+keystore.properties

@@ -149,6 +149,12 @@ fun OmniReadApp(modifier: Modifier = Modifier, vm: AppNavViewModel = hiltViewMod
                 onOpenRewards = { nav.navigate(Routes.Rewards) },
                 onOpenReader = { chapterId, _ -> nav.navigate(Routes.reader(chapterId)) },
                 onOpenLogin = { nav.navigate(Routes.Login) },
+                onSignedOut = {
+                    nav.navigate(Routes.AuthLanding) {
+                        popUpTo(Routes.Main) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
                 onOpenNotifications = { nav.navigate(Routes.Notifications) },
             )
         }

@@ -74,7 +74,7 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun deleteAccount() {
-        runCatching { api.deleteAccount().unwrap() }
+        api.deleteAccount().unwrap()
         tokenStore.clear()
     }
 

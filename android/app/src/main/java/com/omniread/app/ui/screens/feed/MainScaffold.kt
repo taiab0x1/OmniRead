@@ -55,6 +55,7 @@ fun MainScaffold(
     onOpenRewards: () -> Unit,
     onOpenReader: (String, String?) -> Unit,
     onOpenLogin: () -> Unit = {},
+    onSignedOut: () -> Unit = {},
     onOpenNotifications: () -> Unit = {},
 ) {
     var tab by rememberSaveable { mutableStateOf(Tab.Discover) }
@@ -78,7 +79,7 @@ fun MainScaffold(
                 )
                 Tab.Me -> ProfileScreen(
                     onOpenCoinStore = onOpenCoinStore,
-                    onSignedOut = {},
+                    onSignedOut = onSignedOut,
                     onOpenRewards = onOpenRewards,
                     onOpenVip = onOpenVip,
                     onOpenLogin = onOpenLogin,

@@ -16,12 +16,29 @@ Kotlin + Jetpack Compose Android client for OmniRead.
 2. Set the API base URL by adding to `~/.gradle/gradle.properties` (or per-project) when overriding the defaults:
 
    ```
-   OMNIREAD_API_BASE=http://10.0.2.2:8000
+   OMNIREAD_API_BASE=https://api.rakibul.life
    ```
 
-   Debug builds default to the temporary HTTP server at `http://109.123.244.82:8000` and allow cleartext traffic for development. `10.0.2.2` reaches your host machine from the emulator. For physical devices use your LAN IP. Release builds require a real HTTPS API URL, so set `OMNIREAD_API_BASE=https://api.yourdomain.com` before shipping.
+   Debug and release builds default to OmniRead's HTTPS API at `https://api.rakibul.life`. Local HTTP development is still allowed only for emulator/local loopback hosts such as `10.0.2.2`, `127.0.0.1`, and `localhost`; pass `OMNIREAD_DEBUG_API_BASE` when testing a local backend.
 
 3. Sync Gradle and run the `app` configuration.
+
+## Release Signing
+
+Play uploads require a signed Android App Bundle. Keep the keystore outside git and provide these values through `~/.gradle/gradle.properties`, CI secrets, or environment variables:
+
+```
+OMNIREAD_RELEASE_STORE_FILE=/absolute/path/to/omniread-upload.jks
+OMNIREAD_RELEASE_STORE_PASSWORD=...
+OMNIREAD_RELEASE_KEY_ALIAS=omniread-upload
+OMNIREAD_RELEASE_KEY_PASSWORD=...
+```
+
+Then build the Play artifact with:
+
+```
+OMNIREAD_API_BASE=https://api.rakibul.life ./gradlew :app:bundleRelease
+```
 
 ## AdMob
 
@@ -38,7 +55,7 @@ Kotlin + Jetpack Compose Android client for OmniRead.
   - `OMNIREAD_ADMOB_INTERSTITIAL_AD_UNIT_ID`
 - The app caps ad content at Teen and explicitly marks OmniRead as not child-directed.
 - Do not click live ads while testing release builds. Use debug builds or configured AdMob test devices for development.
-- Rewarded ads still depend on AdMob server-side verification for trusted rewards. AdMob requires an HTTPS callback URL, so the temporary HTTP endpoint cannot be saved in AdMob; update SSV after the production API domain is live.
+- Rewarded ads still depend on AdMob server-side verification for trusted rewards. AdMob requires an HTTPS callback URL; use `https://api.rakibul.life/v1/payments/ad-reward/admob-callback`.
 - Leave AdMob store details unlinked until the Google Play app/listing is available. Before production review, add a developer website and publish `app-ads.txt`.
 
 ## Architecture
@@ -85,7 +102,7 @@ util/           Device fingerprint helper
 
 ## Notes
 
-- `network_security_config.xml` allows cleartext only for `10.0.2.2` and `localhost` — production traffic is HTTPS-only.
+- `network_security_config.xml` allows debug cleartext only for `10.0.2.2`, `127.0.0.1`, and `localhost` — production traffic is HTTPS-only.
 - AdMob IDs are injected through Gradle build config fields and the manifest placeholder.
 - Backup rules exclude auth tokens and offline chapter caches so refresh tokens and saved chapter text don't sync across devices.
 - Compose previews are not included in this scaffold; add per-screen `@Preview` composables as you iterate.

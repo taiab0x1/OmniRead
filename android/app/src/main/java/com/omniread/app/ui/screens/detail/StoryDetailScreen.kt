@@ -67,6 +67,7 @@ import com.omniread.app.ui.components.ErrorBanner
 import com.omniread.app.ui.components.FullScreenLoading
 import com.omniread.app.ui.components.Pill
 import com.omniread.app.ui.theme.Tokens
+import com.omniread.app.util.AppLinks
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -225,7 +226,7 @@ fun StoryDetailScreen(
                         val text = buildString {
                             append(s.title)
                             if (!s.summary.isNullOrBlank()) append("\n\n").append(s.summary)
-                            append("\n\nRead on OmniRead: https://omniread.app/story/${s.id}")
+                            append("\n\nRead on OmniRead: ${AppLinks.Website}")
                         }
                         val intent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"

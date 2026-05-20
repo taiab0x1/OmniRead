@@ -2,16 +2,16 @@
 
 ## Domain Setup
 
-Buy a domain and point these hosts before production:
+Configured hosts:
 
-- `api.<domain>` -> OmniRead backend over HTTPS
-- `www.<domain>` or `<domain>` -> public website/legal pages
+- `api.rakibul.life` -> OmniRead backend over HTTPS
+- `omnireadapp.rakibul.life` -> public website/legal pages
 - `admin.<domain>` -> admin panel, protected from public signups
 
 Production Android release builds must use:
 
 ```text
-OMNIREAD_API_BASE=https://api.<domain>
+OMNIREAD_API_BASE=https://api.rakibul.life
 ```
 
 The release Gradle build intentionally fails if this is still `api.yourdomain.com` or the temporary IP.
@@ -20,10 +20,10 @@ The release Gradle build intentionally fails if this is still `api.yourdomain.co
 
 Publish these before Play review:
 
-- Privacy policy: `https://www.<domain>/privacy`
-- Account deletion: `https://www.<domain>/delete-account`
-- Support/contact: `support@<domain>` or a contact page
-- AdMob app-ads.txt: `https://www.<domain>/app-ads.txt`
+- Privacy policy: `https://omnireadapp.rakibul.life/privacy/`
+- Account deletion: `https://omnireadapp.rakibul.life/delete-account/`
+- Support/contact: `https://omnireadapp.rakibul.life/support/` and `imtonski@gmail.com`
+- AdMob app-ads.txt: `https://omnireadapp.rakibul.life/app-ads.txt`
 
 The backend already has `DELETE /v1/auth/account`, which schedules account deletion with a 30-day purge window. The public deletion page should explain how users delete in-app and how to contact support.
 
@@ -75,7 +75,7 @@ Digital coins/VIP must use Google Play Billing on Android.
 After the Play listing exists:
 
 - Link AdMob app store details to the Play listing.
-- Update rewarded SSV callback to `https://api.<domain>/v1/payments/ad-reward/admob-callback`.
+- Update rewarded SSV callback to `https://api.rakibul.life/v1/payments/ad-reward/admob-callback`.
 - Publish `app-ads.txt` on the website domain.
 - Keep debug builds on Google demo ad IDs; do not click live ads during testing.
 
@@ -85,7 +85,16 @@ Use Android App Bundle for Play:
 
 ```bash
 cd android
-OMNIREAD_API_BASE=https://api.<domain> ./gradlew :app:bundleRelease
+OMNIREAD_API_BASE=https://api.rakibul.life ./gradlew :app:bundleRelease
+```
+
+Release signing must be configured with local/secret Gradle values before upload:
+
+```text
+OMNIREAD_RELEASE_STORE_FILE=/absolute/path/to/omniread-upload.jks
+OMNIREAD_RELEASE_STORE_PASSWORD=...
+OMNIREAD_RELEASE_KEY_ALIAS=omniread-upload
+OMNIREAD_RELEASE_KEY_PASSWORD=...
 ```
 
 Then upload `android/app/build/outputs/bundle/release/app-release.aab` through Play Console.

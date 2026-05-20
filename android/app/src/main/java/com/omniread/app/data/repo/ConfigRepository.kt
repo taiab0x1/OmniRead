@@ -1,6 +1,7 @@
 package com.omniread.app.data.repo
 
 import com.omniread.app.data.api.OmniReadApi
+import com.omniread.app.util.AppLinks
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,8 +63,8 @@ data class AppRemoteConfig(
     val trendingTags: List<String> = emptyList(),
     val trendingTitles: List<String> = emptyList(),
     val profileMenuItems: List<ProfileMenuItem> = emptyList(),
-    val feedbackEmail: String = "support@omniread.app",
-    val rateUsUrl: String = "https://play.google.com/store/apps/details?id=com.omniread.app",
+    val feedbackEmail: String = AppLinks.SupportEmail,
+    val rateUsUrl: String = AppLinks.PlayStore,
 )
 
 @Singleton
@@ -140,8 +141,8 @@ class ConfigRepository @Inject constructor(
             profileMenuItems = raw["profile_menu"]?.jsonObject?.get("items")?.jsonArray?.map {
                 json.decodeFromJsonElement<ProfileMenuItem>(it)
             } ?: emptyList(),
-            feedbackEmail = raw["profile_menu"]?.jsonObject?.get("feedback_email")?.jsonPrimitive?.contentOrNull ?: "support@omniread.app",
-            rateUsUrl = raw["profile_menu"]?.jsonObject?.get("rate_us_url")?.jsonPrimitive?.contentOrNull ?: "https://play.google.com/store/apps/details?id=com.omniread.app",
+            feedbackEmail = raw["profile_menu"]?.jsonObject?.get("feedback_email")?.jsonPrimitive?.contentOrNull ?: AppLinks.SupportEmail,
+            rateUsUrl = raw["profile_menu"]?.jsonObject?.get("rate_us_url")?.jsonPrimitive?.contentOrNull ?: AppLinks.PlayStore,
         )
     }
 }
