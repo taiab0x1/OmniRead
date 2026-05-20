@@ -2,6 +2,7 @@ package com.omniread.app.util
 
 import android.app.Activity
 import android.content.Context
+import com.omniread.app.BuildConfig
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
@@ -9,6 +10,7 @@ import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.RequestConfiguration
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.google.android.gms.ads.rewarded.RewardedAd
@@ -19,9 +21,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object AdManager {
-    private const val REWARDED_AD_UNIT_ID = "ca-app-pub-1681671255853598/4826017508"
-    private const val INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712"
-    private const val BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
+    private val rewardedAdUnitId = BuildConfig.ADMOB_REWARDED_AD_UNIT_ID
+    private val interstitialAdUnitId = BuildConfig.ADMOB_INTERSTITIAL_AD_UNIT_ID
+    private val bannerAdUnitId = BuildConfig.ADMOB_BANNER_AD_UNIT_ID
     private const val MIN_INTERSTITIAL_INTERVAL_MS = 3 * 60 * 1000L
 
     private var rewardedAd: RewardedAd? = null
@@ -37,6 +39,12 @@ object AdManager {
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
 
     fun initialize(context: Context) {
+        MobileAds.setRequestConfiguration(
+            RequestConfiguration.Builder()
+                .setMaxAdContentRating(RequestConfiguration.MAX_AD_CONTENT_RATING_T)
+                .setTagForChildDirectedTreatment(RequestConfiguration.TAG_FOR_CHILD_DIRECTED_TREATMENT_FALSE)
+                .build()
+        )
         MobileAds.initialize(context) {}
         loadRewardedAd(context)
         loadInterstitialAd(context)
@@ -45,7 +53,7 @@ object AdManager {
     fun createBannerAdView(context: Context): AdView {
         return AdView(context).apply {
             setAdSize(AdSize.BANNER)
-            adUnitId = BANNER_AD_UNIT_ID
+            adUnitId = bannerAdUnitId
             loadAd(AdRequest.Builder().build())
         }
     }
@@ -55,7 +63,7 @@ object AdManager {
         _loading.value = true
 
         val adRequest = AdRequest.Builder().build()
-        RewardedAd.load(context, REWARDED_AD_UNIT_ID, adRequest, object : RewardedAdLoadCallback() {
+        RewardedAd.load(context, rewardedAdUnitId, adRequest, object : RewardedAdLoadCallback() {
             override fun onAdLoaded(ad: RewardedAd) {
                 rewardedAd = ad
                 _adReady.value = true
@@ -72,7 +80,7 @@ object AdManager {
 
     fun loadInterstitialAd(context: Context) {
         if (interstitialAd != null) return
-        InterstitialAd.load(context, INTERSTITIAL_AD_UNIT_ID, AdRequest.Builder().build(), object : InterstitialAdLoadCallback() {
+        InterstitialAd.load(context, interstitialAdUnitId, AdRequest.Builder().build(), object : InterstitialAdLoadCallback() {
             override fun onAdLoaded(ad: InterstitialAd) {
                 interstitialAd = ad
                 _interstitialReady.value = true

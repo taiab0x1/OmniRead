@@ -23,6 +23,24 @@ Kotlin + Jetpack Compose Android client for OmniRead.
 
 3. Sync Gradle and run the `app` configuration.
 
+## AdMob
+
+- Debug builds use Google's demo app/ad unit IDs, so development ads should show the `Test Ad` label.
+- Release builds default to OmniRead's live AdMob IDs:
+  - App: `ca-app-pub-1681671255853598~7517732244`
+  - Rewarded `Chapter Unlock Reward`: `ca-app-pub-1681671255853598/4826017508`
+  - Banner `Home Feed Banner`: `ca-app-pub-1681671255853598/1418840716`
+  - Interstitial `Reader Chapter Transition Interstitial`: `ca-app-pub-1681671255853598/6994601029`
+- Release IDs can be overridden with Gradle properties or environment variables:
+  - `OMNIREAD_ADMOB_APP_ID`
+  - `OMNIREAD_ADMOB_REWARDED_AD_UNIT_ID`
+  - `OMNIREAD_ADMOB_BANNER_AD_UNIT_ID`
+  - `OMNIREAD_ADMOB_INTERSTITIAL_AD_UNIT_ID`
+- The app caps ad content at Teen and explicitly marks OmniRead as not child-directed.
+- Do not click live ads while testing release builds. Use debug builds or configured AdMob test devices for development.
+- Rewarded ads still depend on AdMob server-side verification for trusted rewards. AdMob requires an HTTPS callback URL, so the temporary HTTP endpoint cannot be saved in AdMob; update SSV after the production API domain is live.
+- Leave AdMob store details unlinked until the Google Play app/listing is available. Before production review, add a developer website and publish `app-ads.txt`.
+
 ## Architecture
 
 ```
@@ -68,6 +86,6 @@ util/           Device fingerprint helper
 ## Notes
 
 - `network_security_config.xml` allows cleartext only for `10.0.2.2` and `localhost` — production traffic is HTTPS-only.
-- AdMob app ID in `strings.xml` is the Google test ID — replace before release.
+- AdMob IDs are injected through Gradle build config fields and the manifest placeholder.
 - Backup rules exclude auth tokens and offline chapter caches so refresh tokens and saved chapter text don't sync across devices.
 - Compose previews are not included in this scaffold; add per-screen `@Preview` composables as you iterate.

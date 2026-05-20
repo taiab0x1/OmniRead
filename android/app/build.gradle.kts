@@ -7,6 +7,14 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+fun gradleOrEnv(name: String, fallback: String) =
+    providers.environmentVariable(name)
+        .orElse(providers.gradleProperty(name))
+        .orElse(fallback)
+
+fun buildConfigString(value: String): String =
+    "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+
 android {
     namespace = "com.omniread.app"
     compileSdk = 35
@@ -30,11 +38,45 @@ android {
 
     buildTypes {
         release {
+            val admobAppId = gradleOrEnv(
+                "OMNIREAD_ADMOB_APP_ID",
+                "ca-app-pub-1681671255853598~7517732244",
+            ).get()
+            val rewardedAdUnitId = gradleOrEnv(
+                "OMNIREAD_ADMOB_REWARDED_AD_UNIT_ID",
+                "ca-app-pub-1681671255853598/4826017508",
+            ).get()
+            val bannerAdUnitId = gradleOrEnv(
+                "OMNIREAD_ADMOB_BANNER_AD_UNIT_ID",
+                "ca-app-pub-1681671255853598/1418840716",
+            ).get()
+            val interstitialAdUnitId = gradleOrEnv(
+                "OMNIREAD_ADMOB_INTERSTITIAL_AD_UNIT_ID",
+                "ca-app-pub-1681671255853598/6994601029",
+            ).get()
+
+            manifestPlaceholders["admobAppId"] = admobAppId
+            buildConfigField("String", "ADMOB_APP_ID", buildConfigString(admobAppId))
+            buildConfigField("String", "ADMOB_REWARDED_AD_UNIT_ID", buildConfigString(rewardedAdUnitId))
+            buildConfigField("String", "ADMOB_BANNER_AD_UNIT_ID", buildConfigString(bannerAdUnitId))
+            buildConfigField("String", "ADMOB_INTERSTITIAL_AD_UNIT_ID", buildConfigString(interstitialAdUnitId))
+
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         debug {
+            val admobAppId = "ca-app-pub-3940256099942544~3347511713"
+            val rewardedAdUnitId = "ca-app-pub-3940256099942544/5224354917"
+            val bannerAdUnitId = "ca-app-pub-3940256099942544/6300978111"
+            val interstitialAdUnitId = "ca-app-pub-3940256099942544/1033173712"
+
+            manifestPlaceholders["admobAppId"] = admobAppId
+            buildConfigField("String", "ADMOB_APP_ID", buildConfigString(admobAppId))
+            buildConfigField("String", "ADMOB_REWARDED_AD_UNIT_ID", buildConfigString(rewardedAdUnitId))
+            buildConfigField("String", "ADMOB_BANNER_AD_UNIT_ID", buildConfigString(bannerAdUnitId))
+            buildConfigField("String", "ADMOB_INTERSTITIAL_AD_UNIT_ID", buildConfigString(interstitialAdUnitId))
+
             applicationIdSuffix = ".debug"
             isDebuggable = true
         }
