@@ -15,6 +15,19 @@ fun gradleOrEnv(name: String, fallback: String) =
 fun buildConfigString(value: String): String =
     "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
+fun requireProductionApiBase(value: String) {
+    require(value.startsWith("https://")) {
+        "Release builds require OMNIREAD_API_BASE to start with https://"
+    }
+    require(!value.contains("yourdomain.com") && !value.contains("109.123.244.82")) {
+        "Set OMNIREAD_API_BASE to the real production HTTPS API domain before building release"
+    }
+}
+
+val releaseTaskRequested = gradle.startParameter.taskNames.any { task ->
+    task.contains("release", ignoreCase = true)
+}
+
 android {
     namespace = "com.omniread.app"
     compileSdk = 35
@@ -37,6 +50,7 @@ android {
                 "OMNIREAD_API_BASE",
                 "https://api.yourdomain.com",
             ).get()
+            if (releaseTaskRequested) requireProductionApiBase(apiBase)
             val admobAppId = gradleOrEnv(
                 "OMNIREAD_ADMOB_APP_ID",
                 "ca-app-pub-1681671255853598~7517732244",
