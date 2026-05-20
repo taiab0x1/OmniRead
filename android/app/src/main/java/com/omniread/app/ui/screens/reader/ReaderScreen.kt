@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -111,6 +110,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -315,6 +315,10 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    fun clearSaveOfflineMessage() {
+        _state.value = _state.value.copy(saveOfflineMessage = null)
+    }
+
     fun loadComments(chapterId: String) {
         _state.value = _state.value.copy(commentsLoading = true, commentMessage = null)
         viewModelScope.launch {
@@ -367,6 +371,13 @@ fun ReaderScreen(
     val state by vm.state.collectAsState()
     val cfg by vm.config.collectAsState()
     LaunchedEffect(chapterId) { vm.load(chapterId) }
+    LaunchedEffect(state.saveOfflineMessage) {
+        val message = state.saveOfflineMessage
+        if (!message.isNullOrBlank() && !message.startsWith("Saving")) {
+            delay(2200)
+            vm.clearSaveOfflineMessage()
+        }
+    }
 
     // Theme-derived colors
     val bgColor = when (state.theme) {
@@ -561,16 +572,12 @@ fun ReaderScreen(
                 }
             }
 
-            if (state.fetch is ChapterFetch.Unlocked && (showControls || !state.saveOfflineMessage.isNullOrBlank())) {
-                ReaderMiniBar(
-                    savedOffline = state.offlineSaved,
-                    saveMessage = state.saveOfflineMessage,
-                    onSaveOffline = { vm.saveOffline() },
-                    onOpenSettings = { showSettingsSheet = true },
+            if (state.fetch is ChapterFetch.Unlocked && !state.saveOfflineMessage.isNullOrBlank()) {
+                ReaderSaveStatus(
+                    message = state.saveOfflineMessage ?: "",
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                        .padding(horizontal = 14.dp, vertical = 16.dp),
                 )
             }
             if (showSettingsSheet) {
@@ -847,11 +854,8 @@ private fun RelatedStoryChip(story: Story, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ReaderMiniBar(
-    savedOffline: Boolean,
-    saveMessage: String?,
-    onSaveOffline: () -> Unit,
-    onOpenSettings: () -> Unit,
+private fun ReaderSaveStatus(
+    message: String,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -859,41 +863,12 @@ private fun ReaderMiniBar(
             .clip(RoundedCornerShape(999.dp))
             .background(Tokens.Bg1.copy(alpha = 0.95f))
             .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(999.dp))
-            .padding(horizontal = 10.dp, vertical = 7.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        MiniIconAction(
-            icon = if (savedOffline) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-            label = saveMessage ?: if (savedOffline) "Offline" else "Save",
-            onClick = onSaveOffline,
-        )
-        Box(Modifier.width(1.dp).height(22.dp).background(Color.White.copy(alpha = 0.1f)))
-        MiniIconAction(
-            icon = Icons.Filled.Tune,
-            label = "Controls",
-            onClick = onOpenSettings,
-        )
-    }
-}
-
-@Composable
-private fun MiniIconAction(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .height(34.dp)
-            .clip(RoundedCornerShape(999.dp))
-            .clickable { onClick() }
-            .padding(horizontal = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, contentDescription = null, tint = Tokens.Ink1, modifier = Modifier.size(17.dp))
+        Icon(Icons.Filled.Bookmark, contentDescription = null, tint = Tokens.Ink1, modifier = Modifier.size(17.dp))
         Spacer(Modifier.width(6.dp))
-        Text(label, color = Tokens.Ink1, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+        Text(message, color = Tokens.Ink1, style = MaterialTheme.typography.labelMedium, maxLines = 1)
     }
 }
 

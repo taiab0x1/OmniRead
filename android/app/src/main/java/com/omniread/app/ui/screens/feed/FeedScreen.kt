@@ -89,6 +89,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class FeedGenreTab(val label: String, val query: String?)
@@ -124,6 +125,7 @@ class FeedViewModel @Inject constructor(
         val coinBalance: Int? = null,
         val rewardMessage: String? = null,
         val claimingDaily: Boolean = false,
+        val dailyRewardPromptVisible: Boolean = true,
         val initialGenre: String? = null,
     )
     private val _state = MutableStateFlow(State())
@@ -221,13 +223,22 @@ class FeedViewModel @Inject constructor(
                         coinBalance = profile?.coinBalance ?: _state.value.coinBalance,
                         rewardMessage = "Daily reward checked",
                     )
+                    autoHideDailyRewardPrompt()
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
                         claimingDaily = false,
                         rewardMessage = it.message ?: "Already checked today",
                     )
+                    autoHideDailyRewardPrompt()
                 }
+        }
+    }
+
+    private fun autoHideDailyRewardPrompt() {
+        viewModelScope.launch {
+            delay(1600)
+            _state.value = _state.value.copy(dailyRewardPromptVisible = false)
         }
     }
 }
@@ -340,6 +351,7 @@ fun FeedScreen(
                 coinBalance = state.coinBalance,
                 rewardMessage = state.rewardMessage,
                 claimingDaily = state.claimingDaily,
+                dailyRewardPromptVisible = state.dailyRewardPromptVisible,
                 onContinue = { onOpenReader(it.chapterId) },
                 onClaimDaily = vm::claimDailyReward,
             )
@@ -486,10 +498,12 @@ private fun HomeQuickActions(
     coinBalance: Int?,
     rewardMessage: String?,
     claimingDaily: Boolean,
+    dailyRewardPromptVisible: Boolean,
     onContinue: (HistoryItem) -> Unit,
     onClaimDaily: () -> Unit,
 ) {
-    if (continueItem == null && readingStreak == null && coinBalance == null) return
+    val showDailyReward = dailyRewardPromptVisible && (readingStreak != null || coinBalance != null || rewardMessage != null || claimingDaily)
+    if (continueItem == null && !showDailyReward) return
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         continueItem?.let { item ->
@@ -546,43 +560,45 @@ private fun HomeQuickActions(
             Spacer(Modifier.height(8.dp))
         }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(Tokens.Bg1.copy(alpha = 0.68f))
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(Icons.Filled.LocalFireDepartment, contentDescription = null, tint = Tokens.Gold, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(8.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "Day ${readingStreak ?: 0} streak",
-                    color = Tokens.Ink1,
-                    style = MaterialTheme.typography.labelLarge,
-                )
-                Text(
-                    rewardMessage ?: "${coinBalance ?: 0} coins available",
-                    color = Tokens.Ink3,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Box(
+        if (showDailyReward) {
+            Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(Tokens.Accent.copy(alpha = if (claimingDaily) 0.38f else 1f))
-                    .clickable(enabled = !claimingDaily) { onClaimDaily() }
-                    .padding(horizontal = 12.dp, vertical = 7.dp),
-                contentAlignment = Alignment.Center,
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Tokens.Bg1.copy(alpha = 0.68f))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    if (claimingDaily) "Checking" else "Claim",
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelMedium,
-                )
+                Icon(Icons.Filled.LocalFireDepartment, contentDescription = null, tint = Tokens.Gold, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Day ${readingStreak ?: 0} streak",
+                        color = Tokens.Ink1,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    Text(
+                        rewardMessage ?: "${coinBalance ?: 0} coins available",
+                        color = Tokens.Ink3,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(Tokens.Accent.copy(alpha = if (claimingDaily) 0.38f else 1f))
+                        .clickable(enabled = !claimingDaily) { onClaimDaily() }
+                        .padding(horizontal = 12.dp, vertical = 7.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        if (claimingDaily) "Checking" else "Claim",
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
             }
         }
     }
