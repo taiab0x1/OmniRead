@@ -56,9 +56,7 @@ import kotlinx.coroutines.launch
 class RewardsViewModel @Inject constructor(
     private val configRepo: ConfigRepository,
     private val userRepo: com.omniread.app.data.repo.UserRepository,
-    private val paymentRepo: com.omniread.app.data.repo.PaymentRepository,
     private val tokenStore: com.omniread.app.data.local.TokenStore,
-    @dagger.hilt.android.qualifiers.ApplicationContext private val ctx: android.content.Context,
 ) : ViewModel() {
     val config = configRepo.config
     private val _coinBalance = MutableStateFlow(0)
@@ -96,18 +94,12 @@ class RewardsViewModel @Inject constructor(
     }
 
     fun onAdRewarded() {
+        _message.value = "Ad watched. Reward arrives after secure verification."
         viewModelScope.launch {
-            runCatching {
-                paymentRepo.validateAdReward(
-                    placement = "ad_reward",
-                    chapterId = null,
-                    deviceFingerprint = com.omniread.app.util.deviceFingerprint(ctx),
-                    ssvTransactionId = null,
-                )
-            }
             runCatching { userRepo.profile() }.onSuccess {
                 _coinBalance.value = it.coinBalance
-                _message.value = "Reward claimed!"
+                _streak.value = it.readingStreak
+                _userId.value = it.id
             }
         }
     }

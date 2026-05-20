@@ -11,6 +11,7 @@ from app.dependencies import get_current_user
 from app.models import AdminUser, Chapter, Comment, User
 from app.schemas.common import Meta, ok
 from app.schemas.story import CommentCreate, CommentItem
+from app.services import chapter_service
 
 router = APIRouter()
 
@@ -83,6 +84,8 @@ def create_comment(
     chapter = db.get(Chapter, chapter_id)
     if not chapter or chapter.status != "published":
         raise NotFoundError("Chapter not found")
+    if not chapter_service.is_unlocked(db, user, chapter):
+        raise BadRequestError("Chapter not unlocked", code="chapter_locked")
     if body.parent_id:
         parent = db.get(Comment, body.parent_id)
         if not parent or parent.chapter_id != chapter_id:

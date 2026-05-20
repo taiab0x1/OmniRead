@@ -8,7 +8,6 @@ import {
   Settings,
   ScrollText,
   LogOut,
-  BookOpen,
   Bell,
   Coins,
   Tags,

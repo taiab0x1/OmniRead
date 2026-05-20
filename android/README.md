@@ -51,7 +51,7 @@ util/           Device fingerprint helper
 
 ## Auth flow
 
-- Tokens persist in `DataStore` (`omniread_auth.preferences_pb`, excluded from cloud backup)
+- Tokens persist in `DataStore` (`datastore/omniread_auth.preferences_pb`, excluded from cloud/device backup)
 - Splash decides between auth landing and main scaffold based on stored access token
 - Refresh token rotation is server-driven (matches backend `/v1/auth/refresh`)
 - Guest sign-in is one tap from the auth landing — uses a SHA-256 device fingerprint
@@ -69,5 +69,5 @@ util/           Device fingerprint helper
 
 - `network_security_config.xml` allows cleartext only for `10.0.2.2` and `localhost` — production traffic is HTTPS-only.
 - AdMob app ID in `strings.xml` is the Google test ID — replace before release.
-- Backup rules exclude the auth preferences file so refresh tokens don't sync across devices.
+- Backup rules exclude auth tokens and offline chapter caches so refresh tokens and saved chapter text don't sync across devices.
 - Compose previews are not included in this scaffold; add per-screen `@Preview` composables as you iterate.

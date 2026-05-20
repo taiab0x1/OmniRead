@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiGetWithMeta, apiPost, extractApiError } from "@/lib/api";
+import { apiGetWithMeta, apiPost, extractApiError } from "@/lib/api";
 import { GripVertical, Plus, Search } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import { useGenres } from "@/hooks/useGenres";

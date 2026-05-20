@@ -18,9 +18,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Diamond
-import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -65,7 +65,11 @@ fun MainScaffold(
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             when (tab) {
-                Tab.Discover -> FeedScreen(onOpenStory = onOpenStory, onOpenNotifications = onOpenNotifications)
+                Tab.Discover -> FeedScreen(
+                    onOpenStory = onOpenStory,
+                    onOpenReader = { onOpenReader(it, null) },
+                    onOpenNotifications = onOpenNotifications,
+                )
                 Tab.Search -> SearchScreen(onOpenStory = onOpenStory)
                 Tab.Library -> LibraryScreen(
                     onOpenStory = onOpenStory,
@@ -121,7 +125,7 @@ private fun BottomNavBar(current: Tab, onSelect: (Tab) -> Unit) {
                 Icon(Icons.Filled.Diamond, "VIP", tint = Color.White, modifier = Modifier.size(22.dp))
             }
 
-            NavItem(Icons.Filled.LibraryBooks, "Library", current == Tab.Library) { onSelect(Tab.Library) }
+            NavItem(Icons.AutoMirrored.Filled.LibraryBooks, "Library", current == Tab.Library) { onSelect(Tab.Library) }
             NavItem(Icons.Filled.Person, "Me", current == Tab.Me) { onSelect(Tab.Me) }
         }
     }

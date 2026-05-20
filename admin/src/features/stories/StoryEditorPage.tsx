@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { useRef, useState } from "react";
 import { api, apiGet, apiPut, apiPost, extractApiError } from "@/lib/api";
-import { ArrowLeft, BookPlus, Sparkles, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, BookPlus, Sparkles, Upload } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 
 type StoryDetail = {

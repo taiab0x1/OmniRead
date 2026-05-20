@@ -48,8 +48,6 @@ import com.omniread.app.ui.components.ErrorBanner
 import com.omniread.app.ui.components.FullScreenLoading
 import com.omniread.app.ui.theme.Tokens
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.time.OffsetDateTime
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -213,7 +211,10 @@ private fun NotificationRow(item: NotificationItem) {
 }
 
 private fun formatTimestamp(value: String): String {
-    return runCatching {
-        OffsetDateTime.parse(value).format(DateTimeFormatter.ofPattern("MMM d, h:mm a"))
-    }.getOrElse { value.take(16).replace('T', ' ') }
+    val compact = value
+        .substringBefore('.')
+        .substringBefore('+')
+        .removeSuffix("Z")
+        .replace('T', ' ')
+    return compact.take(16).ifBlank { value }
 }

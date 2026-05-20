@@ -1,4 +1,5 @@
 import hashlib
+import ipaddress
 
 import jwt
 from fastapi import Depends, Header, HTTPException, Request, status
@@ -85,9 +86,11 @@ def get_idempotency_key(idempotency_key: str | None = Header(None)) -> str | Non
 
 def get_client_ip(request: Request) -> str:
     fwd = request.headers.get("x-forwarded-for")
-    if fwd:
-        return fwd.split(",")[0].strip()
-    return request.client.host if request.client else "0.0.0.0"
+    candidate = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else None)
+    try:
+        return str(ipaddress.ip_address(candidate or "0.0.0.0"))
+    except ValueError:
+        return "127.0.0.1"
 
 
 def hash_token(token: str) -> str:

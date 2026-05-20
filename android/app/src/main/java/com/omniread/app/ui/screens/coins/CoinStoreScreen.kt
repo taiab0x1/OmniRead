@@ -46,7 +46,6 @@ import com.omniread.app.ui.components.Pill
 import com.omniread.app.ui.theme.Tokens
 import com.omniread.app.util.BillingManager
 import com.omniread.app.util.PurchaseResult
-import com.omniread.app.util.deviceFingerprint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,7 +58,6 @@ class CoinStoreViewModel @Inject constructor(
     private val payments: PaymentRepository,
     private val users: UserRepository,
     private val tokenStore: TokenStore,
-    @dagger.hilt.android.qualifiers.ApplicationContext private val ctx: android.content.Context,
     val billing: BillingManager,
 ) : ViewModel() {
     private val _packages = MutableStateFlow<List<CoinPackage>>(emptyList())
@@ -114,21 +112,8 @@ class CoinStoreViewModel @Inject constructor(
     }
 
     fun onAdRewarded() {
-        viewModelScope.launch {
-            runCatching {
-                payments.validateAdReward(
-                    placement = "ad_reward",
-                    chapterId = null,
-                    deviceFingerprint = deviceFingerprint(ctx),
-                    ssvTransactionId = null,
-                )
-            }.onSuccess {
-                _toastMessage.value = "Ad reward claimed!"
-                refreshBalance()
-            }.onFailure {
-                _toastMessage.value = it.message ?: "Could not claim ad reward"
-            }
-        }
+        _toastMessage.value = "Ad watched. Coins arrive after secure verification."
+        refreshBalance()
     }
 
     private fun refreshBalance() {

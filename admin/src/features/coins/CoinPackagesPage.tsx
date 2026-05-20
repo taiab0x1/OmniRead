@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPut, apiDelete, extractApiError } from "@/lib/api";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api";
 import { Plus, Trash2, Save } from "lucide-react";
 
 type CoinPkg = {

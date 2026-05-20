@@ -40,7 +40,7 @@ export function ChapterEditorPage() {
   });
   const deleteMut = useMutation({
     mutationFn: () => apiDelete(`/admin/chapters/${id}`),
-    onSuccess: (_d, _v, ctx) => {
+    onSuccess: () => {
       if (ch.data?.story_id) navigate(`/stories/${ch.data.story_id}`);
     },
   });

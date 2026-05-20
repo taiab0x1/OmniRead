@@ -13,6 +13,7 @@ os.environ.setdefault("ENV", "test")
 
 from app.config import settings  # noqa: E402
 from app.db.session import Base, get_db  # noqa: E402
+from app.db.redis import redis_client  # noqa: E402
 from app.main import app  # noqa: E402
 
 ENGINE = create_engine(settings.DATABASE_URL, future=True)
@@ -45,6 +46,8 @@ def db():
 
 @pytest.fixture
 def client(db):
+    redis_client.flushdb()
+
     def override():
         try:
             yield db
@@ -55,11 +58,12 @@ def client(db):
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.pop(get_db, None)
+    redis_client.flushdb()
 
 
 @pytest.fixture
 def fresh_email():
-    return f"u_{uuid.uuid4().hex[:10]}@test.local"
+    return f"u_{uuid.uuid4().hex[:10]}@omniread.app"
 
 
 @pytest.fixture

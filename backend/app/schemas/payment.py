@@ -26,7 +26,7 @@ class PlayPurchaseVerifyRequest(BaseModel):
 
 
 class AdRewardValidateRequest(BaseModel):
-    """Client-initiated reward request. Server cross-checks AdMob SSV separately."""
+    """Manual reward validation for a server-verified AdMob SSV transaction."""
     placement: str = Field(default="chapter_unlock")
     chapter_id: UUID | None = None
     device_fingerprint: str = Field(min_length=8, max_length=255)

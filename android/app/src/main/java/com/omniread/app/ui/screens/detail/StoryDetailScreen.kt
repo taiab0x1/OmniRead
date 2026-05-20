@@ -2,6 +2,7 @@ package com.omniread.app.ui.screens.detail
 
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,16 +13,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
@@ -42,7 +49,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -71,9 +80,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.layout.width
-import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Scaffold
 
 @HiltViewModel
@@ -246,6 +252,8 @@ private fun Body(
     onCommentGuestBlocked: () -> Unit,
     onShare: () -> Unit,
 ) {
+    val firstReadableChapter = chapters.firstOrNull { it.isFree || it.isUnlocked } ?: chapters.firstOrNull()
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(Tokens.Bg0),
     ) {
@@ -315,25 +323,30 @@ private fun Body(
                     )
                 }
                 Spacer(Modifier.height(20.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(Tokens.Accent)
-                        .clickable {
-                            chapters.firstOrNull()?.let { onOpenReader(it.id) }
-                        }
-                        .padding(vertical = 14.dp),
-                    contentAlignment = Alignment.Center,
+                StoryStatsRow(story = story, chapters = chapters)
+                Spacer(Modifier.height(18.dp))
+                StartReadingButton(
+                    chapter = firstReadableChapter,
+                    onOpenReader = onOpenReader,
+                )
+                Spacer(Modifier.height(26.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom,
                 ) {
-                    Text(
-                        "Start reading",
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelLarge,
-                    )
+                    Column {
+                        Text("Chapters", color = Tokens.Ink0, style = MaterialTheme.typography.headlineMedium)
+                        Text(
+                            "${chapters.size} published - ${chapters.count { it.isFree || it.isUnlocked }} ready now",
+                            color = Tokens.Ink3,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    if (chapters.any { !it.isFree && !it.isUnlocked }) {
+                        Pill(text = "Locked chapters preview first", bg = Tokens.Bg2, fg = Tokens.Ink3)
+                    }
                 }
-                Spacer(Modifier.height(28.dp))
-                Text("Chapters", color = Tokens.Ink0, style = MaterialTheme.typography.headlineMedium)
                 Spacer(Modifier.height(8.dp))
             }
         }
@@ -345,7 +358,21 @@ private fun Body(
         item {
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                 Spacer(Modifier.height(28.dp))
-                Text("Rate this story", color = Tokens.Ink0, style = MaterialTheme.typography.headlineMedium)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column {
+                        Text("Reviews", color = Tokens.Ink0, style = MaterialTheme.typography.headlineMedium)
+                        Text("Tap a star to rate this story", color = Tokens.Ink3, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Star, contentDescription = null, tint = Tokens.Gold, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("%.1f".format(story.avgRating), color = Tokens.Ink0, style = MaterialTheme.typography.titleMedium)
+                    }
+                }
                 Spacer(Modifier.height(12.dp))
                 RatingBar(
                     currentRating = story.userRating ?: 0,
@@ -353,7 +380,7 @@ private fun Body(
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "${"%.1f".format(story.avgRating)} average (${story.totalChapters} ratings)",
+                    if (story.userRating != null) "Your rating is saved." else "Sign in before rating if you are using guest mode.",
                     color = Tokens.Ink3,
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -374,20 +401,96 @@ private fun Body(
 }
 
 @Composable
+private fun StoryStatsRow(story: Story, chapters: List<ChapterListItem>) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Tokens.Bg1.copy(alpha = 0.86f))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        StatItem(value = "${story.totalChapters}", label = "Chapters")
+        StatItem(value = "%.1f".format(story.avgRating), label = "Rating")
+        StatItem(value = story.estimatedReadTime?.let { "${it}m" } ?: "${chapters.sumOf { it.wordCount ?: 0 }.coerceAtLeast(0) / 220}m", label = "Read time")
+    }
+}
+
+@Composable
+private fun StatItem(value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 8.dp)) {
+        Text(value, color = Tokens.Ink0, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+        Spacer(Modifier.height(2.dp))
+        Text(label, color = Tokens.Ink3, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+    }
+}
+
+@Composable
+private fun StartReadingButton(chapter: ChapterListItem?, onOpenReader: (String) -> Unit) {
+    val enabled = chapter != null
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(if (enabled) Brush.linearGradient(Tokens.GradientPink) else Brush.linearGradient(listOf(Tokens.Bg2, Tokens.Bg2)))
+            .clickable(enabled = enabled) { chapter?.let { onOpenReader(it.id) } }
+            .padding(horizontal = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(21.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = chapter?.let {
+                if (it.isFree || it.isUnlocked) "Start reading" else "Preview locked chapter"
+            } ?: "No chapters yet",
+            color = Color.White,
+            style = MaterialTheme.typography.labelLarge,
+        )
+    }
+}
+
+@Composable
 private fun ChapterRow(c: ChapterListItem, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(horizontal = 20.dp, vertical = 7.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(Tokens.Bg1.copy(alpha = 0.56f))
+            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(18.dp))
+            .padding(horizontal = 14.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(13.dp))
+                .background(
+                    if (c.isFree || c.isUnlocked) Tokens.Success.copy(alpha = 0.14f)
+                    else Tokens.Gold.copy(alpha = 0.14f)
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                c.chapterNumber.toString(),
+                color = if (c.isFree || c.isUnlocked) Tokens.Success else Tokens.Gold,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "Ch ${c.chapterNumber} · ${c.title ?: ""}".trim(' ', '·'),
+                c.title?.takeIf { it.isNotBlank() } ?: "Chapter ${c.chapterNumber}",
                 color = Tokens.Ink0,
                 style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
+            Spacer(Modifier.height(3.dp))
             if (!c.cliffhangerPreview.isNullOrBlank()) {
                 Text(
                     c.cliffhangerPreview,
@@ -395,17 +498,30 @@ private fun ChapterRow(c: ChapterListItem, onClick: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
                 )
+            } else {
+                Text(
+                    when {
+                        c.isFree -> "Free chapter"
+                        c.isUnlocked -> "Unlocked"
+                        else -> "Preview available before unlock"
+                    },
+                    color = Tokens.Ink3,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                )
             }
         }
         Spacer(Modifier.size(12.dp))
         when {
-            c.isFree || c.isUnlocked -> Icon(Icons.Filled.LockOpen, null, tint = Tokens.Success)
+            c.isFree || c.isUnlocked -> Icon(Icons.Filled.LockOpen, null, tint = Tokens.Success, modifier = Modifier.size(20.dp))
             else -> Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Lock, null, tint = Tokens.Gold)
+                Icon(Icons.Filled.Lock, null, tint = Tokens.Gold, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.size(4.dp))
                 Text("${c.coinCost}", color = Tokens.Gold, style = MaterialTheme.typography.labelLarge)
             }
         }
+        Spacer(Modifier.width(8.dp))
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Tokens.Ink3, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -453,27 +569,47 @@ private fun CommentsSection(
 
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
         Spacer(Modifier.height(28.dp))
-        Text("Comments (${comments.size})", color = Tokens.Ink0, style = MaterialTheme.typography.headlineMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column {
+                Text("Comments", color = Tokens.Ink0, style = MaterialTheme.typography.headlineMedium)
+                Text(
+                    "Showing chapter 1 discussion",
+                    color = Tokens.Ink3,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Pill(text = "${comments.size}", bg = Tokens.Bg2, fg = Tokens.Ink2)
+        }
         Spacer(Modifier.height(12.dp))
 
         if (isGuest) {
-            // Sign-in prompt for guests
             Box(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                    .background(Tokens.Bg2).clickable { onGuestBlocked() }.padding(14.dp),
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                    .background(Tokens.Bg1)
+                    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+                    .clickable { onGuestBlocked() }
+                    .padding(14.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("💬", fontSize = 18.sp)
+                    Box(
+                        modifier = Modifier.size(36.dp).clip(CircleShape).background(Tokens.Accent.copy(alpha = 0.16f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Filled.ChatBubbleOutline, contentDescription = null, tint = Tokens.Accent, modifier = Modifier.size(18.dp))
+                    }
                     Spacer(Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Sign in to comment", color = Tokens.Ink0, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-                        Text("Join the conversation", color = Tokens.Ink3, fontSize = 12.sp)
+                        Text("Guests can read comments, signed-in readers can join in.", color = Tokens.Ink3, fontSize = 12.sp)
                     }
-                    Text("Sign in →", color = Tokens.Accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Tokens.Accent, modifier = Modifier.size(20.dp))
                 }
             }
         } else {
-            // Signed-in comment composer
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -485,9 +621,14 @@ private fun CommentsSection(
                     cursorBrush = androidx.compose.ui.graphics.SolidColor(Tokens.Accent),
                     decorationBox = { inner ->
                         Box(
-                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(Tokens.Bg2).padding(12.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Tokens.Bg1)
+                                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+                                .padding(horizontal = 14.dp, vertical = 13.dp),
                         ) {
-                            if (commentText.isEmpty()) Text("Write a comment…", color = Tokens.Ink3, fontSize = 14.sp)
+                            if (commentText.isEmpty()) Text("Write a comment...", color = Tokens.Ink3, fontSize = 14.sp)
                             inner()
                         }
                     },
@@ -495,7 +636,7 @@ private fun CommentsSection(
                 )
                 Spacer(Modifier.width(8.dp))
                 Box(
-                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp))
+                    modifier = Modifier.size(46.dp).clip(RoundedCornerShape(16.dp))
                         .background(if (commentText.isNotBlank()) Tokens.Accent else Tokens.Bg2)
                         .clickable {
                             if (commentText.isNotBlank() && firstChapterId != null) {
@@ -524,7 +665,7 @@ private fun CommentsSection(
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("→", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                 }
             }
 
@@ -541,16 +682,32 @@ private fun CommentsSection(
         Spacer(Modifier.height(16.dp))
 
         if (comments.isEmpty() && !loading) {
-            Text("No comments yet. Be the first!", color = Tokens.Ink3, fontSize = 13.sp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Tokens.Bg1.copy(alpha = 0.72f))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("No comments yet. Be the first!", color = Tokens.Ink3, fontSize = 13.sp)
+            }
         }
         comments.take(10).forEach { comment ->
-            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Tokens.Bg1.copy(alpha = 0.58f))
+                    .padding(12.dp),
+            ) {
                 Box(
                     modifier = Modifier.size(28.dp).clip(CircleShape).background(Tokens.Accent.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center,
                 ) { Text(comment.username?.firstOrNull()?.uppercase() ?: "?", color = Tokens.Accent, fontSize = 12.sp) }
                 Spacer(Modifier.width(10.dp))
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(comment.username ?: "User", color = Tokens.Ink1, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                         if (comment.isAdmin) {
@@ -560,6 +717,7 @@ private fun CommentsSection(
                             ) { Text("Author", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold) }
                         }
                     }
+                    Spacer(Modifier.height(3.dp))
                     Text(comment.content, color = Tokens.Ink2, fontSize = 13.sp)
                 }
             }

@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 import sentry_sdk
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -17,6 +18,14 @@ from app.middleware.security_headers import SecurityHeadersMiddleware
 
 configure_logging()
 log = get_logger("app")
+
+
+def _cors_origins() -> list[str]:
+    if settings.CORS_ORIGINS:
+        return settings.CORS_ORIGINS
+    if settings.ENV == "production":
+        return []
+    return ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 if settings.SENTRY_DSN:
     sentry_sdk.init(
@@ -45,7 +54,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS or ["*"],
+    allow_origins=_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -70,6 +79,7 @@ async def app_error_handler(_: Request, exc: AppError):
 
 @app.exception_handler(RequestValidationError)
 async def validation_handler(_: Request, exc: RequestValidationError):
+    errors = jsonable_encoder(exc.errors(), custom_encoder={ValueError: str})
     return JSONResponse(
         status_code=422,
         content={
@@ -79,7 +89,7 @@ async def validation_handler(_: Request, exc: RequestValidationError):
             "error": {
                 "code": "validation_error",
                 "message": "Invalid input",
-                "extra": exc.errors(),
+                "extra": errors,
             },
         },
     )

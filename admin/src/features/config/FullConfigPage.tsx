@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPut, extractApiError } from "@/lib/api";
+import { apiGet, apiPut } from "@/lib/api";
 import { Save, ToggleLeft, ToggleRight } from "lucide-react";
 
 type AdConfig = {

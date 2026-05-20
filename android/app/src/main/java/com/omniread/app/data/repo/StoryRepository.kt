@@ -6,6 +6,7 @@ import com.omniread.app.data.model.ChapterListItem
 import com.omniread.app.data.model.ChapterPreview
 import com.omniread.app.data.model.Story
 import com.omniread.app.data.model.UnlockResponse
+import com.omniread.app.ui.screens.detail.CommentData
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -79,5 +80,16 @@ class StoryRepository @Inject constructor(
             put("completed", completed)
         }
         return api.saveProgress(chapterId, body).unwrap()
+    }
+
+    suspend fun chapterComments(chapterId: String): List<CommentData> =
+        api.chapterComments(chapterId).unwrap()
+
+    suspend fun postChapterComment(chapterId: String, content: String, isSpoiler: Boolean = false): JsonElement {
+        val body = buildJsonObject {
+            put("content", content)
+            put("is_spoiler", isSpoiler)
+        }
+        return api.postComment(chapterId, body).unwrap()
     }
 }

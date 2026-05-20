@@ -116,6 +116,8 @@ def validate_ad_reward(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    if not body.ssv_transaction_id:
+        raise ForbiddenError("Reward must be verified by AdMob SSV", code="ssv_required")
     new_balance, next_available, unlocked_chapter_id = ad_reward_service.grant_ad_reward(
         db,
         user=user,

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPut, extractApiError } from "@/lib/api";
+import { apiGet, apiPut } from "@/lib/api";
 import { Plus, GripVertical, Trash2 } from "lucide-react";
 
 const DEFAULT_GENRES = [
@@ -69,7 +69,7 @@ export function GenresPage() {
             </tr>
           </thead>
           <tbody>
-            {genres.map((g, i) => (
+            {genres.map((g) => (
               <tr key={g.key} className="border-t border-white/5">
                 <td className="px-6 py-3 text-ink-3"><GripVertical size={14} /></td>
                 <td className="px-6 py-3 font-mono text-xs text-ink-1">{g.key}</td>

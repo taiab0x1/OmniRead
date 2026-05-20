@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
 import { apiGet, apiPost, extractApiError } from "@/lib/api";
 import { RefreshCw, RotateCcw, Sparkles } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";

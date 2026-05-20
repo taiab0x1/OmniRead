@@ -1,9 +1,39 @@
 package com.omniread.app.ui
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoStories
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -26,6 +56,7 @@ import com.omniread.app.ui.screens.onboarding.OnboardingScreen
 import com.omniread.app.ui.screens.reader.ReaderScreen
 import com.omniread.app.ui.screens.rewards.RewardsScreen
 import com.omniread.app.ui.screens.vip.VipScreen
+import com.omniread.app.ui.theme.Tokens
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -66,8 +97,8 @@ class AppNavViewModel @Inject constructor(
         State(ready = true, onboardingSeen = seen, hasToken = !token.isNullOrBlank())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), State())
 
-    fun markOnboardingSeen() {
-        viewModelScope.launch { prefs.markOnboardingSeen() }
+    fun markOnboardingSeen(preferredGenres: List<String> = emptyList()) {
+        viewModelScope.launch { prefs.markOnboardingSeen(preferredGenres) }
     }
 }
 
@@ -75,7 +106,10 @@ class AppNavViewModel @Inject constructor(
 fun OmniReadApp(modifier: Modifier = Modifier, vm: AppNavViewModel = hiltViewModel()) {
     val nav = rememberNavController()
     val state by vm.state.collectAsState()
-    if (!state.ready) return
+    if (!state.ready) {
+        OpeningScreen(modifier)
+        return
+    }
 
     val start = when {
         !state.onboardingSeen -> Routes.Onboarding
@@ -92,8 +126,8 @@ fun OmniReadApp(modifier: Modifier = Modifier, vm: AppNavViewModel = hiltViewMod
     NavHost(navController = nav, startDestination = start, modifier = modifier) {
         composable(Routes.Onboarding) {
             OnboardingScreen(
-                onDone = {
-                    vm.markOnboardingSeen()
+                onDone = { preferredGenres ->
+                    vm.markOnboardingSeen(preferredGenres)
                     nav.navigate(Routes.AuthLanding) {
                         popUpTo(Routes.Onboarding) { inclusive = true }
                     }
@@ -139,8 +173,15 @@ fun OmniReadApp(modifier: Modifier = Modifier, vm: AppNavViewModel = hiltViewMod
             ReaderScreen(
                 chapterId = chapterId,
                 onBack = { nav.popBackStack() },
+                onHome = { goMain() },
                 onOpenCoinStore = { nav.navigate(Routes.CoinStore) },
-                onOpenChapter = { nav.navigate(Routes.reader(it)) },
+                onOpenChapter = {
+                    nav.navigate(Routes.reader(it)) {
+                        popUpTo(Routes.Reader) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onOpenStory = { nav.navigate(Routes.storyDetail(it)) },
             )
         }
         composable(Routes.CoinStore) {
@@ -180,6 +221,95 @@ fun OmniReadApp(modifier: Modifier = Modifier, vm: AppNavViewModel = hiltViewMod
         }
         composable(Routes.Notifications) {
             NotificationsScreen(onBack = { nav.popBackStack() })
+        }
+    }
+}
+
+@Composable
+private fun OpeningScreen(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "opening")
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 0.94f,
+        targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "opening_pulse",
+    )
+    val glow by infiniteTransition.animateFloat(
+        initialValue = 0.22f,
+        targetValue = 0.42f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "opening_glow",
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Tokens.Bg0),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawRect(
+                brush = Brush.verticalGradient(
+                    listOf(Color(0xFF121826), Tokens.Bg0, Color(0xFF080A0F))
+                )
+            )
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(Tokens.Accent.copy(alpha = glow), Color.Transparent),
+                    center = Offset(size.width * 0.5f, size.height * 0.44f),
+                    radius = size.width * 0.7f,
+                ),
+                radius = size.width * 0.72f,
+                center = Offset(size.width * 0.5f, size.height * 0.44f),
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .size(240.dp)
+                .scale(pulse)
+                .blur(70.dp)
+                .clip(CircleShape)
+                .background(Tokens.AccentRose.copy(alpha = 0.16f))
+        )
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(86.dp)
+                    .scale(pulse)
+                    .clip(RoundedCornerShape(26.dp))
+                    .background(Brush.linearGradient(Tokens.GradientPink)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.AutoStories,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(42.dp),
+                )
+            }
+            Spacer(Modifier.height(22.dp))
+            Text(
+                text = "OmniRead",
+                color = Tokens.Ink0,
+                style = MaterialTheme.typography.displayMedium,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Preparing your next story",
+                color = Tokens.Ink2,
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     }
 }

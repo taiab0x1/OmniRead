@@ -91,7 +91,7 @@ Idempotency keys are stored on `coin_transactions.idempotency_key` (unique). Def
 - `POST /v1/payments/coins/purchase`: verifies a Play Billing product purchase token via Android Publisher API, acknowledges it, credits coins idempotently
 - `POST /v1/payments/subscription/subscribe`: verifies via `purchases.subscriptionsv2.get`, materializes a `subscriptions` row, updates `users.subscription_tier` + `subscription_expires_at`
 - `POST /v1/payments/google-play/rtdn`: handler for Pub/Sub-pushed Real-time Developer Notifications (refunds, cancellations, holds, grace periods)
-- `POST /v1/payments/ad-reward/validate`: client-initiated; cross-checks AdMob SSV via `admob-callback`. Cooldown + daily cap enforced server-side
+- `POST /v1/payments/ad-reward/validate`: accepts only server-verified AdMob SSV transactions; client-only reward callbacks are not trusted. Cooldown + daily cap enforced server-side
 
 ## AI generation
 

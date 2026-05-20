@@ -17,11 +17,15 @@ export function RequireAuth({ children, roles }: Props) {
 
   const live = isTokenLive();
 
-  const { isLoading } = useQuery({
+  const { data: fetchedMe, isLoading } = useQuery({
     queryKey: ["admin-me"],
     queryFn: () => apiGet<AdminMe>("/admin/auth/me"),
     enabled: live && !me,
   });
+
+  useEffect(() => {
+    if (fetchedMe) setMe(fetchedMe);
+  }, [fetchedMe, setMe]);
 
   useEffect(() => {
     if (!live) {

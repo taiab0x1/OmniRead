@@ -44,6 +44,10 @@ def _is_unlocked(db: Session, user: User | None, chapter: Chapter) -> bool:
     return exists is not None
 
 
+def is_unlocked(db: Session, user: User | None, chapter: Chapter) -> bool:
+    return _is_unlocked(db, user, chapter)
+
+
 def _adjacent_ids(db: Session, chapter: Chapter) -> tuple[UUID | None, UUID | None]:
     next_ch = db.scalar(
         select(Chapter)

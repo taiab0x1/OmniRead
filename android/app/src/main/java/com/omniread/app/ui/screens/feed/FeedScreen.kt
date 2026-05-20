@@ -39,6 +39,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RemoveRedEye
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -47,6 +48,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -70,7 +72,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.omniread.app.data.local.AppPrefsStore
 import coil.compose.AsyncImage
+import com.omniread.app.data.model.HistoryItem
 import com.omniread.app.data.model.Story
 import com.omniread.app.data.repo.ConfigRepository
 import com.omniread.app.data.repo.StoryRepository
@@ -84,6 +88,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 data class FeedGenreTab(val label: String, val query: String?)
@@ -100,6 +105,7 @@ class FeedViewModel @Inject constructor(
     private val repo: StoryRepository,
     private val configRepo: ConfigRepository,
     private val userRepo: UserRepository,
+    private val prefs: AppPrefsStore,
 ) : ViewModel() {
     val config = configRepo.config
 
@@ -113,6 +119,12 @@ class FeedViewModel @Inject constructor(
         val initialized: Boolean = false,
         val genreTabs: List<FeedGenreTab> = emptyList(),
         val notificationCount: Int = 0,
+        val continueItem: HistoryItem? = null,
+        val readingStreak: Int? = null,
+        val coinBalance: Int? = null,
+        val rewardMessage: String? = null,
+        val claimingDaily: Boolean = false,
+        val initialGenre: String? = null,
     )
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state.asStateFlow()
@@ -128,9 +140,21 @@ class FeedViewModel @Inject constructor(
             }
             _state.value = _state.value.copy(genreTabs = tabs.ifEmpty { fallbackGenres })
         }
-        refresh()
+        refreshPersonalized()
         refreshNotificationCount()
+        loadHomeExtras()
     }
+
+    private fun refreshPersonalized() {
+        viewModelScope.launch {
+            val localGenre = prefs.preferredGenresFlow.first().firstOrNull()
+            val profileGenre = runCatching { userRepo.profile().preferredGenres?.firstOrNull() }.getOrNull()
+            val genre = localGenre ?: profileGenre
+            _state.value = _state.value.copy(initialGenre = genre)
+            refresh(genre)
+        }
+    }
+
     fun refresh(genre: String? = null) {
         _state.value = _state.value.copy(loading = true, error = null)
         viewModelScope.launch {
@@ -167,6 +191,45 @@ class FeedViewModel @Inject constructor(
                 }
         }
     }
+
+    fun loadHomeExtras() {
+        viewModelScope.launch {
+            runCatching { userRepo.history().firstOrNull() }
+                .onSuccess { item -> _state.value = _state.value.copy(continueItem = item) }
+        }
+        viewModelScope.launch {
+            runCatching { userRepo.profile() }
+                .onSuccess { profile ->
+                    _state.value = _state.value.copy(
+                        readingStreak = profile.readingStreak,
+                        coinBalance = profile.coinBalance,
+                    )
+                }
+        }
+    }
+
+    fun claimDailyReward() {
+        if (_state.value.claimingDaily) return
+        _state.value = _state.value.copy(claimingDaily = true, rewardMessage = null)
+        viewModelScope.launch {
+            runCatching { userRepo.claimDaily() }
+                .onSuccess {
+                    val profile = runCatching { userRepo.profile() }.getOrNull()
+                    _state.value = _state.value.copy(
+                        claimingDaily = false,
+                        readingStreak = profile?.readingStreak ?: _state.value.readingStreak,
+                        coinBalance = profile?.coinBalance ?: _state.value.coinBalance,
+                        rewardMessage = "Daily reward checked",
+                    )
+                }
+                .onFailure {
+                    _state.value = _state.value.copy(
+                        claimingDaily = false,
+                        rewardMessage = it.message ?: "Already checked today",
+                    )
+                }
+        }
+    }
 }
 
 private val fallbackGenres = listOf(
@@ -183,6 +246,7 @@ private val fallbackGenres = listOf(
 @Composable
 fun FeedScreen(
     onOpenStory: (String) -> Unit,
+    onOpenReader: (String) -> Unit = {},
     onOpenNotifications: () -> Unit = {},
     vm: FeedViewModel = hiltViewModel(),
 ) {
@@ -190,6 +254,7 @@ fun FeedScreen(
     val cfg by vm.config.collectAsState()
     val genreTabs = state.genreTabs.ifEmpty { fallbackGenres }
     var selectedGenreQuery by remember { mutableStateOf<String?>(null) }
+    var appliedInitialGenre by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedSection by remember { mutableStateOf<FeedSection?>(null) }
@@ -217,6 +282,17 @@ fun FeedScreen(
             .thenByDescending { it.publishedAt ?: "" })
     }
     val hotReads = remember(hotReadsPool) { hotReadsPool.take(8) }
+
+    LaunchedEffect(state.initialGenre, genreTabs) {
+        val preferred = state.initialGenre
+        if (!appliedInitialGenre && !preferred.isNullOrBlank()) {
+            selectedGenreQuery = genreTabs.firstOrNull { tab ->
+                tab.query.equals(preferred, ignoreCase = true) ||
+                    tab.label.contains(preferred, ignoreCase = true)
+            }?.query ?: preferred
+            appliedInitialGenre = true
+        }
+    }
 
     if (!state.initialized && state.loading) { FullScreenLoading(); return }
 
@@ -257,6 +333,16 @@ fun FeedScreen(
                     }
                 }
             }
+
+            HomeQuickActions(
+                continueItem = state.continueItem,
+                readingStreak = state.readingStreak,
+                coinBalance = state.coinBalance,
+                rewardMessage = state.rewardMessage,
+                claimingDaily = state.claimingDaily,
+                onContinue = { onOpenReader(it.chapterId) },
+                onClaimDaily = vm::claimDailyReward,
+            )
 
             // Genre tabs
             Row(
@@ -389,6 +475,115 @@ fun FeedScreen(
                     onOpenStory(it)
                 },
             )
+        }
+    }
+}
+
+@Composable
+private fun HomeQuickActions(
+    continueItem: HistoryItem?,
+    readingStreak: Int?,
+    coinBalance: Int?,
+    rewardMessage: String?,
+    claimingDaily: Boolean,
+    onContinue: (HistoryItem) -> Unit,
+    onClaimDaily: () -> Unit,
+) {
+    if (continueItem == null && readingStreak == null && coinBalance == null) return
+
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        continueItem?.let { item ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Tokens.Bg1.copy(alpha = 0.9f))
+                    .clickable { onContinue(item) }
+                    .padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(44.dp)
+                        .height(58.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Tokens.Bg2),
+                ) {
+                    AsyncImage(
+                        model = item.coverUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Continue reading", color = Tokens.AccentSoft, style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        item.title,
+                        color = Tokens.Ink0,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        "Resume from your last chapter",
+                        color = Tokens.Ink3,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(Tokens.Accent),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(Tokens.Bg1.copy(alpha = 0.68f))
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Filled.LocalFireDepartment, contentDescription = null, tint = Tokens.Gold, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Day ${readingStreak ?: 0} streak",
+                    color = Tokens.Ink1,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                Text(
+                    rewardMessage ?: "${coinBalance ?: 0} coins available",
+                    color = Tokens.Ink3,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(Tokens.Accent.copy(alpha = if (claimingDaily) 0.38f else 1f))
+                    .clickable(enabled = !claimingDaily) { onClaimDaily() }
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    if (claimingDaily) "Checking" else "Claim",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
         }
     }
 }
