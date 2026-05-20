@@ -1,0 +1,20 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name omnireadapp.example.com;
+
+    root /var/www/omnireadapp;
+    index index.html;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+    location = /app-ads.txt {
+        default_type text/plain;
+        try_files /app-ads.txt =404;
+    }
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
