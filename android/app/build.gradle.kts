@@ -28,16 +28,15 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
 
-        val apiBase = providers
-            .environmentVariable("OMNIREAD_API_BASE")
-            .orElse(providers.gradleProperty("OMNIREAD_API_BASE"))
-            .orElse("https://109.123.244.82:8000")
-        buildConfigField("String", "API_BASE_URL", "\"${apiBase.get()}\"")
         buildConfigField("String", "GOOGLE_OAUTH_CLIENT_ID", "\"\"")
     }
 
     buildTypes {
         release {
+            val apiBase = gradleOrEnv(
+                "OMNIREAD_API_BASE",
+                "https://api.yourdomain.com",
+            ).get()
             val admobAppId = gradleOrEnv(
                 "OMNIREAD_ADMOB_APP_ID",
                 "ca-app-pub-1681671255853598~7517732244",
@@ -55,6 +54,7 @@ android {
                 "ca-app-pub-1681671255853598/6994601029",
             ).get()
 
+            buildConfigField("String", "API_BASE_URL", buildConfigString(apiBase))
             manifestPlaceholders["admobAppId"] = admobAppId
             buildConfigField("String", "ADMOB_APP_ID", buildConfigString(admobAppId))
             buildConfigField("String", "ADMOB_REWARDED_AD_UNIT_ID", buildConfigString(rewardedAdUnitId))
@@ -66,11 +66,19 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         debug {
+            val apiBase = providers
+                .environmentVariable("OMNIREAD_DEBUG_API_BASE")
+                .orElse(providers.gradleProperty("OMNIREAD_DEBUG_API_BASE"))
+                .orElse(providers.environmentVariable("OMNIREAD_API_BASE"))
+                .orElse(providers.gradleProperty("OMNIREAD_API_BASE"))
+                .orElse("http://109.123.244.82:8000")
+                .get()
             val admobAppId = "ca-app-pub-3940256099942544~3347511713"
             val rewardedAdUnitId = "ca-app-pub-3940256099942544/5224354917"
             val bannerAdUnitId = "ca-app-pub-3940256099942544/6300978111"
             val interstitialAdUnitId = "ca-app-pub-3940256099942544/1033173712"
 
+            buildConfigField("String", "API_BASE_URL", buildConfigString(apiBase))
             manifestPlaceholders["admobAppId"] = admobAppId
             buildConfigField("String", "ADMOB_APP_ID", buildConfigString(admobAppId))
             buildConfigField("String", "ADMOB_REWARDED_AD_UNIT_ID", buildConfigString(rewardedAdUnitId))

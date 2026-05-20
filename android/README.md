@@ -13,13 +13,13 @@ Kotlin + Jetpack Compose Android client for OmniRead.
 ## Build
 
 1. Open `android/` in Android Studio Ladybug or newer.
-2. Set the API base URL by adding to `~/.gradle/gradle.properties` (or per-project):
+2. Set the API base URL by adding to `~/.gradle/gradle.properties` (or per-project) when overriding the defaults:
 
    ```
    OMNIREAD_API_BASE=http://10.0.2.2:8000
    ```
 
-   `10.0.2.2` reaches your host machine from the emulator. For physical devices use your LAN IP.
+   Debug builds default to the temporary HTTP server at `http://109.123.244.82:8000` and allow cleartext traffic for development. `10.0.2.2` reaches your host machine from the emulator. For physical devices use your LAN IP. Release builds require a real HTTPS API URL, so set `OMNIREAD_API_BASE=https://api.yourdomain.com` before shipping.
 
 3. Sync Gradle and run the `app` configuration.
 
