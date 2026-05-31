@@ -115,4 +115,4 @@ Each subdirectory has its own README with stack details, commands, and architect
 
 ## License
 
-This project doesn’t have a license yet. Before making the repo public (or if you want others to contribute), you should add a `LICENSE` file (MIT or Apache‑2.0 are common choices) so it’s clear what people can and can’t do with the code.
+License: TBD (will add MIT/Apache-2.0 before public release).
