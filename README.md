@@ -18,13 +18,23 @@ Also included:
 
 ## Screenshots
 
-> Screenshots live at the repo root:
->
-> - `omniread_discover.png`
-> - `omniread_live.png`, `omniread_live2.png`
-> - `omniread_more.png`
-> - `omniread_vip.png`
-> - `omniread_after_launch.png`
+### Discover
+![Discover](./omniread_discover.png)
+
+### Live
+![Live](./omniread_live.png)
+
+### Live (alt)
+![Live 2](./omniread_live2.png)
+
+### More
+![More](./omniread_more.png)
+
+### VIP
+![VIP](./omniread_vip.png)
+
+### After launch
+![After launch](./omniread_after_launch.png)
 
 ## Quick start
 
@@ -105,4 +115,4 @@ Each subdirectory has its own README with stack details, commands, and architect
 
 ## License
 
-No license file is present yet. If you plan to make this repository public, you likely want to add a license (MIT/Apache‑2.0/GPL/etc.) before publishing.
+This project doesn’t have a license yet. Before making the repo public (or if you want others to contribute), you should add a `LICENSE` file (MIT or Apache‑2.0 are common choices) so it’s clear what people can and can’t do with the code.
